@@ -1,13 +1,21 @@
 import { Octokit } from "@octokit/core";
 import express from "express";
 import { Readable } from "node:stream";
+import fetch from "node-fetch"; // Import node-fetch
+import fs from "fs"; // Import fs module
 
 const app = express()
+
+// Read the content of data.txt
+const dataContent = fs.readFileSync('data.txt', 'utf-8');
 
 app.post("/", express.json(), async (req, res) => {
   // Identify the user, using the GitHub API token provided in the request headers.
   const tokenForUser = req.get("X-GitHub-Token");
-  const octokit = new Octokit({ auth: tokenForUser });
+  const octokit = new Octokit({ 
+    auth: tokenForUser,
+    request: { fetch } // Provide fetch implementation
+  });
   const user = await octokit.request("GET /user");
   console.log("User:", user.data.login);
 
@@ -19,11 +27,17 @@ app.post("/", express.json(), async (req, res) => {
   const messages = payload.messages;
   messages.unshift({
     role: "system",
-    content: "You are a helpful assistant that replies to user messages as if you were the Blackbeard Pirate.",
+    content: "You are a helpful and funny assistant that gives catchy replies to user questions about Github Universe",
   });
   messages.unshift({
     role: "system",
     content: `Start every response with the user's name, which is @${user.data.login}`,
+  });
+
+  // Include the content of data.txt in the messages
+  messages.unshift({
+    role: "system",
+    content: `Here is some additional information that might help you answer questions: ${dataContent}`,
   });
 
   // Use Copilot's LLM to generate a response to the user's messages, with
